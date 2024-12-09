@@ -137,10 +137,12 @@ export class CongestionDetector extends EventEmitter {
 				state.incomingBitrateAfterCongestion = selectedCandidatePair?.stats.availableIncomingBitrate ?? state.incomingBitrateAfterCongestion;
 				state.outgoingBitrateAfterCongestion = selectedCandidatePair?.stats.availableOutgoingBitrate ?? state.outgoingBitrateAfterCongestion;
 				state.congested = true;
+				peerConnection.congested = true;
 			} else {
 				state.incomingBitrateBeforeCongestion = selectedCandidatePair?.stats.availableIncomingBitrate ?? state.incomingBitrateBeforeCongestion;
 				state.outgoingBitrateBeforeCongestion = selectedCandidatePair?.stats.availableOutgoingBitrate ?? state.outgoingBitrateBeforeCongestion;
 				state.congested = false;
+				peerConnection.congested = false;
 			}
 			
 			if (wasCongested === isCongested) {

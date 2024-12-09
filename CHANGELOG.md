@@ -1,3 +1,25 @@
+## 3.11.0
+
+* Added `durationOfCollectingStatsInMs` to the `stats-collected` event.
+* Set the default sensitivity for `CongestionDetector` to `medium`.
+* Changed the default value for `fractionalCorrectionAlertOnThreshold` to 0.3 in `AudioDesyncDetector`.
+* Changed the default value for `fractionalCorrectionAlertOffThreshold` to 0.15 in `AudioDesyncDetector`.
+* Added `FpsVolatilityModule` to the CPU Performance Detector.
+* Added `StatsCollectingSkewModule` to the CPU Performance Detector.
+* Made Mediasoup stats collector compatible with version 3.7.16.
+* Renamed `Mediasoup[*]Surrogate` interfaces to `MediasoupStatsCollector[*]Interface`.
+* Exposed the `MediasoupStatsCollectorDeviceInterface` interface.
+* Fixed `ewmaRttInS` calculation in `PeerConnectionStatsCollector`.
+* Added `LayersChangedDetector` for experimental purposes.
+* Added `pcConnectionState` to the `PEER_CONNECTION_STATE_CHANGED` event.
+* Added `fpsVolatility` as a property to `inboundRtpEntry`.
+
+## 3.0.0
+
+### Conceptual changes
+
+Rewritten ClientMonitor extends EventEmitter.
+
 ## 2.3.0
  * refactored collectors and sampler
  * `clientMontior.os` is moved to `clientMonitor.meta.operationSystem`

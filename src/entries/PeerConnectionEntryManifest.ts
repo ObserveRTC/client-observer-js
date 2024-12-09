@@ -74,6 +74,7 @@ export class PeerConnectionEntryManifest implements PeerConnectionEntry {
     private _connectionState: W3C.RtcPeerConnectionState = 'new';
     public _connectingStartedAt?: number;
     public _connectionEstablihedDurationInMs?: number;
+    public congested?: boolean;
 
     public readonly config: {
         outbStabilityScoresLength: number;
@@ -170,7 +171,7 @@ export class PeerConnectionEntryManifest implements PeerConnectionEntry {
     }
 
     public get usingTURN(): boolean {
-        return (this.getSelectedIceCandidatePair()?.getLocalCandidate()?.stats.candidateType === 'relay' ?? false) &&
+        return (this.getSelectedIceCandidatePair()?.getLocalCandidate()?.stats.candidateType === 'relay') &&
             (this.getSelectedIceCandidatePair()?.getRemoteCandidate()?.stats.url?.startsWith('turn:') ?? false);
     }
 

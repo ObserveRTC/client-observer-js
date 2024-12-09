@@ -63,6 +63,7 @@ export type {
     IceServerEntry,
     PeerConnectionEntryEvents,
     PeerConnectionEntry,
+    AudioPlayoutEntry,
 } from "./entries/StatsEntryInterfaces";
 
 export * as W3CStats from './schema/W3cStatsIdentifiers';

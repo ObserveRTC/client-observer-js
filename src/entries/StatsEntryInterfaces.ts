@@ -388,6 +388,7 @@ export interface PeerConnectionEntry {
     
     connectionState: W3C.RtcPeerConnectionState;
     connectionEstablishedDurationInMs?: number;
+    congested?: boolean;
 
     getSelectedIceCandidatePair(): IceCandidatePairEntry | undefined;
     codecs(): IterableIterator<CodecEntry>;
