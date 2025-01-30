@@ -5,8 +5,9 @@
 Table of Contents:
 
 -   [Quick Start](#quick-start)
--   [Integrations](#integrations)
-    -   [Mediasoup](#mediasoup)
+-   [User Manual](#developer-manual)
+-   [API Manual](#api-manual)
+<!-- 
 -   [Collected Metrics](#collected-metrics)
     -   [Calculated updates](#calculated-updates)
     -   [PeerConnection Entry](#peerconnection-entry)
@@ -20,16 +21,14 @@ Table of Contents:
     -   [Video Freeze Detector](#video-freeze-detector)
     -   [Stucked Inbound Track Detector](#stucked-inbound-track-detector)
 -   [Issues](#issues)
--   [Configurations](#configurations)
+
 -   [Events](#events)
     -   [CLIENT_JOINED Event](#client_joined-event)
     -   [CLIENT_LEFT Event](#client_left-event)
     -   [Custom Call Event](#custom-call-event)
     -   [Extension Stats Event](#extension-stats-event)
--   [Sampling](#sampling)
+-   [Sampling](#sampling) -->
 -   [NPM package](#npm-package)
--   [API docs](#api-docs)
--   [Schemas](#schemas)
 -   [Getting Involved](#getting-involved)
 -   [License](#license)
 
@@ -52,7 +51,7 @@ Add `@observertc/client-monitor-js` to your WebRTC app.
 ```javascript
 import { createClientMonitor } from "@observertc/client-monitor-js";
 const monitor = createClientMonitor();
-const collector = monitor.collectors.addRTCPeerConnection(peerConnection);
+monitor.sources.addRTCPeerConnection(peerConnection);
 
 monitor.on("stats-collected", () => {
     console.log(`Sending audio bitrate: ${monitor.sendingAudioBitrate}`);
@@ -60,13 +59,18 @@ monitor.on("stats-collected", () => {
     console.log(`Receiving audio bitrate: ${monitor.receivingAudioBitrate}`);
     console.log(`Receiving video bitrate: ${monitor.receivingVideoBitrate}`);
 });
+
+monitor.on('freezed-video-track', (trackMonitor) => {
+    
+});
 ```
 
 The above example do as follows:
 
-1.  Create a client monitor, which collect stats every (by default in every 5s)
-2.  Setup a collector collect stats from a peer connection
-3.  Register an event called after stats are collected
+1. Create a client monitor, which collect stats every (by default in every 2s)
+2. Setup a source collect stats from a peer connection
+3. Register an event handler called after stats are collected and metrics are updated
+4. Register an event handler called if a receiving video track has freezed
 
 **NOTE**: `createClientMonitor()` method creates a monitor instance with default configurations.
 You can pass a configuration object to the `createClientMonitor(config: ClientMonitorConfig)` method to customize the monitor instance.
@@ -82,21 +86,22 @@ import mediasoup from "mediaousp-client";
 
 const mediasoupDevice = new mediasoup.Device();
 const monitor = createClientMonitor();
-const collector = monitor.collectors.addMediasoupDevice(mediasoupDevice);
-
-monitor.on("stats-collected", () => {
-    console.log(`Sending audio bitrate: ${monitor.sendingAudioBitrate}`);
-    console.log(`Sending video bitrate: ${monitor.sendingVideoBitrate}`);
-    console.log(`Receiving audio bitrate: ${monitor.receivingAudioBitrate}`);
-    console.log(`Receiving video bitrate: ${monitor.receivingVideoBitrate}`);
-});
+const collector = monitor.sources.addMediasoupDevice(mediasoupDevice);
 ```
 
 **Important Note**: The created collector is hooked to the device's 'newtransport' event and can automatically detect transports created **after** the device has been added. If you create transports before adding the device to the monitor, those previously created transports will not be monitored automatically. You will need to manually add them to the stats collector like this:
 
 ```javascript
-const myTransport = collector.addTransport(myTransport); // your transport created before the device is added to the monitor
+const myTransport = monitor.sources.addMediasoupTransport(myTransport); // your transport created before the device is added to the monitor
 ```
+
+## User Manual
+
+For detailed description of configuration and client monitor usage check out the user manual.
+
+
+
+
 
 ## Collected Metrics
 

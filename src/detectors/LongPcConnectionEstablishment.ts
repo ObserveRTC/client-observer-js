@@ -1,109 +1,42 @@
-import { EventEmitter } from "events";
-import { PeerConnectionEntry } from "../entries/StatsEntryInterfaces";
-import { AlertState, ClientMonitor } from "../ClientMonitor";
 import { Detector } from "./Detector";
+import { PeerConnectionMonitor } from "../monitors/PeerConnectionMonitor";
 
-export type LongPcConnectionEstablishmentDetectorConfig = {
-	// Minimum duration in milliseconds for a track to be considered stuck
-	thresholdInMs: number,
-}
+export class LongPcConnectionEstablishmentDetector implements Detector{
+	public readonly name = 'long-pc-connection-establishment-detector';
+	
+	private get config() {
+		return this.peerConnection.parent.config.longPcConnectionEstablishmentDetector;
+	}
 
-export type LongPcConnectionEstablishmentDetectorEvent = {
-	'alert-state': [AlertState],
-	'too-long-connection-establishment': [{
-		peerConnectionId: string,
-	}],
-	close: [],
-}
-
-export declare interface LongPcConnectionEstablishmentDetector extends Detector {
-	on<K extends keyof LongPcConnectionEstablishmentDetectorEvent>(event: K, listener: (...events: LongPcConnectionEstablishmentDetectorEvent[K]) => void): this;
-	off<K extends keyof LongPcConnectionEstablishmentDetectorEvent>(event: K, listener: (...events: LongPcConnectionEstablishmentDetectorEvent[K]) => void): this;
-	once<K extends keyof LongPcConnectionEstablishmentDetectorEvent>(event: K, listener: (...events: LongPcConnectionEstablishmentDetectorEvent[K]) => void): this;
-	emit<K extends keyof LongPcConnectionEstablishmentDetectorEvent>(event: K, ...events: LongPcConnectionEstablishmentDetectorEvent[K]): boolean;
-}
-
-export class LongPcConnectionEstablishmentDetector extends EventEmitter {
-	private _closed = false;
-	private _timers = new Map<string, ReturnType<typeof setTimeout>>();
-	private _listeners = new Map<string, () => void>();
-	private _destroyCb: () => void;
+	private _evented = false;
 
 	public constructor(
-		public readonly config: LongPcConnectionEstablishmentDetectorConfig,
-		monitor: ClientMonitor,
+		public readonly peerConnection: PeerConnectionMonitor,
 	) {
-		super();
-		this.setMaxListeners(Infinity);
-		const onPeerConnectionAdded = (peerConnectionEntry: PeerConnectionEntry) => {
-			let prevState = peerConnectionEntry.connectionState;
-			const listener = () => {
-				const {
-					connectionState: state,
-				} = peerConnectionEntry;
-
-				if (prevState === state) return;
-				if (state !== 'connecting') {
-					if (state === 'connected') {
-						clearTimeout(this._timers.get(peerConnectionEntry.peerConnectionId));
-					}
-
-					return (prevState = state), void 0;
-				}
-				
-				this._timers.set(peerConnectionEntry.peerConnectionId, setTimeout(() => {
-					this._timers.delete(peerConnectionEntry.peerConnectionId);
-
-					this.emit('too-long-connection-establishment', {
-						peerConnectionId: peerConnectionEntry.peerConnectionId,
-					});
-					this.emit('alert-state', 'on');
-				}, config.thresholdInMs));
-
-				prevState = state;
-			}
-			peerConnectionEntry.events.on('state-updated', listener)
-			this._listeners.set(peerConnectionEntry.peerConnectionId, listener);
-		}
-
-		const onPeerConnectionRemoved = (peerConnectionEntry: PeerConnectionEntry) => {
-			const listener = this._listeners.get(peerConnectionEntry.peerConnectionId);
-			if (listener) {
-				peerConnectionEntry.events.off('state-updated', listener);
-				this._listeners.delete(peerConnectionEntry.peerConnectionId);
-			}
-		}
-
-		this._destroyCb = () => {
-			monitor.storage.events.off('peer-connection-added', onPeerConnectionAdded);
-			monitor.storage.events.off('peer-connection-removed', onPeerConnectionRemoved);
-
-			for (const [peerConnectionId, listener] of this._listeners) {
-				const peerConnectionEntry = monitor.storage.getPeerConnection(peerConnectionId);
-				if (peerConnectionEntry) {
-					peerConnectionEntry.events.off('state-updated', listener);
-				}
-			}
-			this._listeners.clear();
-		}
-
-		monitor.storage.events.on('peer-connection-added', onPeerConnectionAdded);
-		monitor.storage.events.on('peer-connection-removed', onPeerConnectionRemoved);
-
-		for (const peerConnectionEntry of monitor.storage.peerConnections()) {
-			onPeerConnectionAdded(peerConnectionEntry);
-		}
+		
 	}
 
-	public get closed() {
-		return this._closed;
-	}
+	public update(): void {
+		if (this.config.disabled) return;
+		if (this.peerConnection.connectionState !== 'connecting') {
+			if (this._evented && this.peerConnection.connectionState === 'connected') {
+				this._evented = false;
+			}
+		}
+		if (this._evented) return;
+		if (this.peerConnection.connectingStartedAt === undefined) return;
+		
+		const duration = Date.now() - this.peerConnection.connectingStartedAt;
+		if (duration < this.config.thresholdInMs) {
+			return;
+		}
+		this._evented = true;
+		const clientMonitor = this.peerConnection.parent;
 
-	public close() {
-		if (this._closed) return;
-		this._closed = true;
-
-		this._destroyCb();
-		this.emit('close');
+		clientMonitor.emit('too-long-pc-connection-establishment', {
+			peerConnectionMonitor: this.peerConnection,
+			clientMonitor,
+		}
+);
 	}
 }

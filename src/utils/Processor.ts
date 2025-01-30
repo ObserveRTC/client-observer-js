@@ -1,37 +1,40 @@
 export type Middleware<T> = (input: T, next: (input: T) => void) => void;
 
-export function createProcessor<T>() {
-	const middlewares: Middleware<T>[] = [];
-	function addMiddleware(middleware: Middleware<T>) {
-		middlewares.push(middleware);
-	}
-	function removeMiddleware(middleware: Middleware<T>) {
-		const index = middlewares.indexOf(middleware);
-		if (index < 0) return;
-		middlewares.splice(index, 1);
-	}
-	function process(input: T, onprocessed?: (err?: string) => void) {
-		const createNext = (index: number): ((data: T) => void) => {
-			const middleware = middlewares[index];
-			if (!middleware) {
-				return () => onprocessed?.();
-			}
-			return (givenInput: T) => {
-				try {
-					middleware(givenInput, createNext(index + 1));
-				} catch (error) {
-					onprocessed?.(`${error}`);
-				}
-				
-			}
-		}
-		return createNext(0)(input);
+export class Processor<T> {
+	private middlewares: Middleware<T>[] = [];
+	private _finalCallback: ((input: T) => void) | null = null;
+
+	public addMiddleware(middleware: Middleware<T>) {
+		this.middlewares.push(middleware);
 	}
 
-	return {
-		addMiddleware,
-		removeMiddleware,
-		process,
+	public removeMiddleware(middleware: Middleware<T>) {
+		const index = this.middlewares.indexOf(middleware);
+		if (index < 0) return;
+		this.middlewares.splice(index, 1);
 	}
-	
+
+	public process(input: T) {
+		return this._next(0, input);
+	}
+
+	public addFinalCallback(callback: (input: T) => void) {
+		if (this._finalCallback !== null) {
+			throw new Error('Final callback already exists');
+		}
+
+		this._finalCallback = callback;
+	}
+
+	private _next(index: number, input: T): void {
+		if (this.middlewares.length <= index) {
+			return this._finalCallback?.(input);
+		}
+
+		const middleware = this.middlewares[index];
+		if (!middleware) {
+			return this._next(index + 1, input);
+		}
+		return middleware(input, () => this._next(index + 1, input));
+	}
 }
